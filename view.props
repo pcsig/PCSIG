@@ -1,0 +1,3 @@
+P=? [ (state_1=BROADCAST) U (state_1=WAIT) ]
+P=? [F<50 SYNCHRONIZED_1=true&SYNCHRONIZED_2=true ]
+S=? [ SYNCHRONIZED_1=true&SYNCHRONIZED_2=true ]
