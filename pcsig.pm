@@ -26,11 +26,11 @@ const DATA_OK = 1;
 //Data constants
 const bool SYNC = false;	
 
-global state_1 : [0..1] init BROADCAST; // os dois estados que o lider pode estar
+global state_1 : [0..1] init BROADCAST; // phases that the leader may be
 global state_2 : [0..1] init BROADCAST; 
 
 const max_needed_inner_states = 10;
-const phase_token_max = 1; // marcador de fase
+const phase_token_max = 1; // token to indicate whose turn it is
 
 const to_end = 1;
 global end_process : [0..to_end] init 0;
@@ -46,10 +46,10 @@ formula broadcast_phase = mod(phase_token,2) = 0;
 
 module node_1
 
-timer_1 : [0..timeout] init 0; //tempo de atraso da mensagem
-send_timer_1 : [0..MAX_TIMER] init 0; //tempo em que o protocolo funciona antes de reiniciar
+timer_1 : [0..timeout] init 0; //message timeout
+send_timer_1 : [0..MAX_TIMER] init 0; 
 
-SYNCHRONIZED_1 : bool init SYNC;	//marcador de sincronizacao de tempo
+SYNCHRONIZED_1 : bool init SYNC;	
 
 view_p1_p1 : [0..MAX_TIMER] init 0;
 view_p1_p2 : [0..MAX_TIMER] init 0;
@@ -57,37 +57,39 @@ view_p1_p2 : [0..MAX_TIMER] init 0;
 counter_p1_p1 :[0..MAX_TIMER] init 0;
 counter_p1_p2 :[0..MAX_TIMER] init 0;
 
-//RESET DE TODOS OS RELOGIOS - PARTE 2
+//RESET OF CLOCKS - PART 2
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=8 -> 
 (inner_state'=8) & (send_timer_1'=0) & (counter_p1_p1'=NO_DATA) & (counter_p1_p2'=NO_DATA) & (view_p1_p1'=0) & (view_p1_p2'=0) &
 (turn_token'= turn_token + 1) & (timer_1'=0)  & (end_process'=1);
 
-//ANTES DE ENVIAR A MENSAGEM O LIDER INCREMENTA UM VALOR AO SEU CONTADOR
+//BEFORE SENDING THE MESSAGE THE LEADER INCREASES A VALUE TO YOUR COUNTER
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=0 & send_timer_1<MAX_TIMER -> (inner_state'=inner_state+1) & (send_timer_1'=send_timer_1+1); //soma o contador
-//coloca a sua visao na macro visao
+//PUT THE VIEW IN MACRO VIEW
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=1 -> (turn_token'= turn_token + 1)  & (counter_p1_p1'= send_timer_1) & (inner_state'=0); 
 
-//nesta fase o lideres enviam suas visoes e as visoes que eles aprenderam. ESTOU AQUI!!!
+//THE LEADER SEND MESSAGE
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & send_timer_1<MAX_TIMER & (inner_state=2)->  
 (view_p1_p1'=counter_p1_p1) & (view_p1_p2'=counter_p1_p2) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0) ;
 
-//FASE DE RECEBIMENTO DAS MENSAGENS - O TEMPO PARA ESTA FASE ESTA INDICADA DENTRO DA VARIAVEL TIMEOUT
-//O LIDER DE DESTINO VAI ADICIONAR AA SUA MACRO VISAO SE --- ele receber uma mensagem e a sua visao nao estiver contida na macro visao do lider de origem da mensagem e vice versa 
+//PHASE WAIT
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF - it receives a message and its view is not contained in the macro view of the message origin leader and vice versa
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
 + (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//O LIDER DE DESTINO VAI ADICIONAR AA SUA MACRO VISAO SE --- a visao que o lider de destino tem sobre quem originou a mensagem for < do que a visao do lider de origem e !=0 e
-//a visao do lider de origem for >= a visao do lider de destino -2
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF --- the vision the target leader has about the originator of the message so that the vision of the leader of origin is 0 and the vision of the leader 
+//of origin is> = the target leader's view -2
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1>=counter_p1_p1-2
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
 + (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//O LIDER DE DESTINO NAO VAI ADICIONAR AA SUA MACRO VISAO SE --- o lider de destino nao souber nada sobre ele mas o lider de origem souber algo do lider de destino
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF --- the leader of destination does not know anything about him but the leader of origin knows 
+//something of the leader of destiny
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1>=1
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//O LIDER DE DESTINO NAO VAI ADICIONAR AA SUA MACRO VISAO SE --- o lider de destino souber alguma coisa sobre o lider de origem, mas o lider de origem nao souber nada
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF --- the leader of destination knows something about the leader of origin, but the leader of origin 
+//does not know anything
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2>=1 & view_p2_p1=0
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
