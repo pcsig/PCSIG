@@ -1,4 +1,4 @@
-//criado por Cleber Brito Santos em 29/05/2019
+//create by Cleber Brito Santos em 29/05/2019
 
 dtmc
 
@@ -72,29 +72,26 @@ counter_p1_p2 :[0..MAX_TIMER] init 0;
 (view_p1_p1'=counter_p1_p1) & (view_p1_p2'=counter_p1_p2) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0) ;
 
 //PHASE WAIT
-//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF - it receives a message and its view is not contained in the macro view of the message origin leader and vice versa
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF 
+//it receives a message and its view is not contained in the macro view of the message origin leader and vice versa
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
 + (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF --- the vision the target leader has about the originator of the message so that the vision of the leader of origin is 0 and the vision of the leader 
-//of origin is> = the target leader's view -2
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1>=counter_p1_p1-2
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
 + (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF --- the leader of destination does not know anything about him but the leader of origin knows 
-//something of the leader of destiny
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1>=1
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF --- the leader of destination knows something about the leader of origin, but the leader of origin 
-//does not know anything
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2>=1 & view_p2_p1=0
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//O LIDER DE DESTINO VAI ADICIONAR AA SUA MACRO VISAO SE --- a visao que o lider de destino tem sobre quem originou a mensagem for < do que a visao do lider de origem e !=0 e
-//a visao do lider de origem for >= a visao do lider de destino -2
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1<counter_p1_p1-2
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
@@ -127,7 +124,6 @@ endmodule
 
 module change_state
 
-// neste momento o lider vai se preparar para enviar a mensagem
 [] new_phase & phase_token=0 & inner_state=0
 -> (turn_token'=0) & (inner_state'=2);
 
@@ -147,12 +143,12 @@ module change_state
 [] new_phase & phase_token=1 & end_process=0 
 -> (phase_token'=phase_token-1) & (inner_state'=0)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0); 
 
-//RESET DE TODOS OS RELOGIOS - PARTE 1
+//RESET OF CLOCKS - PART 1
 [] new_phase & phase_token=1 & end_process=1 & state_1=WAIT & state_2 = WAIT & timer_1=timeout & inner_state=0
 -> (phase_token'=phase_token-1) & (inner_state'=inner_state+8)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0) ; 
 endmodule
 
-//renomacao dos modulos para diminuir a quantidade de linhas de codigo
+//MODEL RENAMING
 module node_2=node_1[N1=N2,state_1=state_2,timer_1=timer_2,context_1=context_2,send_timer_1=send_timer_2,counter_p1_p1=counter_p2_p2,counter_p1_p2=counter_p2_p1,
 view_p1_p1=view_p2_p2,view_p1_p2=view_p2_p1,SYNCHRONIZED_1=SYNCHRONIZED_2]
 endmodule
