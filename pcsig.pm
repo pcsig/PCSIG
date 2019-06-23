@@ -72,8 +72,8 @@ counter_p1_p2 :[0..MAX_TIMER] init 0;
 (view_p1_p1'=counter_p1_p1) & (view_p1_p2'=counter_p1_p2) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0) ;
 
 //PHASE WAIT
+//< TIMEOUT
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF 
-//it receives a message and its view is not contained in the macro view of the message origin leader and vice versa
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
 + (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
@@ -95,29 +95,26 @@ counter_p1_p2 :[0..MAX_TIMER] init 0;
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1<counter_p1_p1-2
 -> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
 
-//o tempo limite para esperar uma nova atualizacao acabou. 
-//O LIDER DE DESTINO p1 VAI ADICIONAR AA SUA MACRO VISAO SE --- ele receber uma mensagem e a sua visao nao estiver contida na macro visao do lider de origem da mensagem e vice versa 
+//= TIMEOUT. 
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1)
 + (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
 
-//O LIDER DE DESTINO p1 VAI ADICIONAR AA SUA MACRO VISAO SE --- a visao que o lider de origem tiver sobre o destino for !=0 e < que a visao do lider de destino e o lider de 
-//destino tiver a ultima visao enviada pelo lider de origem
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1>=counter_p1_p1-2
 -> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1)
 + (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
 
-//O LIDER DE DESTINO NAO VAI ADICIONAR AA SUA MACRO VISAO SE --- o lider de destino nao souber nada sobre ele mas o lider de origem souber algo do lider de destino
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1>=1
 -> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
 
-//O LIDER DE DESTINO NAO VAI ADICIONAR AA SUA MACRO VISAO SE --- o lider de destino souber alguma coisa sobre o lider de origem, mas o lider de origem nao souber nada
+//THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2>=1 & view_p2_p1=0
 -> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
 
-
-//O LIDER DE DESTINO VAI ADICIONAR AA SUA MACRO VISAO SE --- a visao que o lider de destino tem sobre quem originou a mensagem for < do que a visao do lider de origem e !=0 e
-//a visao do lider de origem for >= a visao do lider de destino -2
+//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1<counter_p1_p1-2
 -> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
 endmodule
