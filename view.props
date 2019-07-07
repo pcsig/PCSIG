@@ -1,3 +1,7 @@
-P=? [ (state_i=BROADCAST) U (state_i=WAIT) ]
-P=? [F<50 SYNCHRONIZED_i=true&SYNCHRONIZED_j=true ]
-S=? [ SYNCHRONIZED_i=true&SYNCHRONIZED_j=true ]
+P=? [ (state_1=BROADCAST) U (state_1=WAIT) ]
+
+P=? [ F<150 SYNCHRONIZED_1=true&SYNCHRONIZED_2=true ]
+
+E [ F (inner_state=8)&(SYNCHRONIZED_1=true&SYNCHRONIZED_2=true)]
+
+S=? [(SYNCHRONIZED_1=true&SYNCHRONIZED_2=true)]
