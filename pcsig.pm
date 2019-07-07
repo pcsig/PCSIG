@@ -29,7 +29,7 @@ const bool SYNC = false;
 global state_1 : [0..1] init BROADCAST; // phases that the leader may be
 global state_2 : [0..1] init BROADCAST; 
 
-const max_needed_inner_states = 10;
+const max_needed_inner_states = 8;
 const phase_token_max = 1; // token to indicate whose turn it is
 
 const to_end = 1;
@@ -60,89 +60,90 @@ counter_p1_p2 :[0..MAX_TIMER] init 0;
 //RESET OF CLOCKS - PART 2
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=8 -> 
 (inner_state'=8) & (send_timer_1'=0) & (counter_p1_p1'=NO_DATA) & (counter_p1_p2'=NO_DATA) & (view_p1_p1'=0) & (view_p1_p2'=0) &
-(turn_token'= turn_token + 1) & (timer_1'=0)  & (end_process'=1);
+(turn_token'= turn_token + 1) & (timer_1'=0)  & (end_process'=1); //line 137
 
 //BEFORE SENDING THE MESSAGE THE LEADER INCREASES A VALUE TO YOUR COUNTER
-[]broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=0 & send_timer_1<MAX_TIMER -> (inner_state'=inner_state+1) & (send_timer_1'=send_timer_1+1); //soma o contador
+[]broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=0 & send_timer_1<MAX_TIMER -> (inner_state'=inner_state+1) & (send_timer_1'=send_timer_1+1); //line 68
 //PUT THE VIEW IN MACRO VIEW
-[]broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=1 -> (turn_token'= turn_token + 1)  & (counter_p1_p1'= send_timer_1) & (inner_state'=0); 
+[]broadcast_phase & context_1 & my_turn & state_1=BROADCAST & inner_state=1 -> (turn_token'= turn_token + 1)  & (counter_p1_p1'= send_timer_1) & (inner_state'=0); //line 124
 
 //THE LEADER SEND MESSAGE
 []broadcast_phase & context_1 & my_turn & state_1=BROADCAST & send_timer_1<MAX_TIMER & (inner_state=2)->  
-(view_p1_p1'=counter_p1_p1) & (view_p1_p2'=counter_p1_p2) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0) ;
+(view_p1_p1'=counter_p1_p1) & (view_p1_p2'=counter_p1_p2) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0); //line 128
 
 //PHASE WAIT
 //< TIMEOUT
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
--> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
-+ (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) //line 141
++ (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0); //line 141
 
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1>=counter_p1_p1-2
--> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
-+ (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0) //line 141
++ (packet_loss_rate): (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0); //line 141
 
 //THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VISION IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1>=1
--> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0); //line 141
 
 //THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2>=1 & view_p2_p1=0
--> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0); //line 141
 
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1<timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1<counter_p1_p1-2
--> (1):(timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (timer_1'=timer_1+1) & (turn_token'= turn_token + 1) & (inner_state'=0); //line 141
 
 //= TIMEOUT. 
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1=0 
--> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1)
-+ (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
+-> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1) //line 145
++ (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1); //line 145
 
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1>=counter_p1_p1-2
--> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1)
-+ (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
+-> (1-packet_loss_rate):(counter_p1_p2'=send_timer_2) & (view_p1_p2'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=true) & (end_process'=1) //line 145
++ (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1); //line 145
 
 //THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2=0 & view_p2_p1>=1
--> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
+-> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1); //line 145
 
 //THE DESTINATION LEADER WILL NOT ADD TO YOUR MACRO VIEW IF
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2>=1 & view_p2_p1=0
--> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
+-> (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1); //line 145
 
 //THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
 []wait_phase & context_1 & my_turn & state_1=WAIT & timer_1=timeout & inner_state=0 & view_p1_p2<=counter_p2_p2 & counter_p1_p2>NO_DATA & view_p2_p1<counter_p1_p1-2
--> (1):(turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1);
+-> (turn_token'= turn_token + 1) & (inner_state'=0) & (SYNCHRONIZED_1'=false) & (end_process'=1); //line 145
 endmodule
 
 module change_state
 
 [] new_phase & phase_token=0 & inner_state=0
--> (turn_token'=0) & (inner_state'=2);
+-> (turn_token'=0) & (inner_state'=2); //line 71
 
 // change the ALL states from BROADCAST TO WAIT
 [] new_phase & phase_token=0 & inner_state=2
--> (phase_token'=phase_token+1) & (inner_state'=0) & (state_1'=WAIT) & (state_2'=WAIT) & (turn_token'=0);
+-> (phase_token'=phase_token+1) & (inner_state'=0) & (state_1'=WAIT) & (state_2'=WAIT) & (turn_token'=0); //if > timeout (line 77 or 82 or 86 or 90 or 94) 
+//if = timeout (100 or 105 or 110 or 114 or 118)
 
 // change the ALL states from BROADCAST TO WAIT
-[] new_phase & phase_token=0 & inner_state=8  & (end_process=0)
--> (phase_token'=phase_token+1) & (inner_state'=0) & (state_1'=WAIT) & (state_2'=WAIT) & (turn_token'=0);
+//[] new_phase & phase_token=0 & inner_state=8  & (end_process=0)
+//-> (phase_token'=phase_token+1) & (inner_state'=0) & (state_1'=WAIT) & (state_2'=WAIT) & (turn_token'=0);
 
 // change the ALL states from BROADCAST TO WAIT - RESET
 [] new_phase & phase_token=0 & inner_state=8  & end_process=1 
--> (phase_token'=0) & (inner_state'=0)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0);
+-> (phase_token'=0) & (inner_state'=0)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0); //line 66
 
 // change the ALL states from WAIT TO BROADCAST 
 [] new_phase & phase_token=1 & end_process=0 
--> (phase_token'=phase_token-1) & (inner_state'=0)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0); 
+-> (phase_token'=phase_token-1) & (inner_state'=0)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0); //line 66
 
 //RESET OF CLOCKS - PART 1
 [] new_phase & phase_token=1 & end_process=1 & state_1=WAIT & state_2 = WAIT & timer_1=timeout & inner_state=0
--> (phase_token'=phase_token-1) & (inner_state'=inner_state+8)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0) ; 
+-> (phase_token'=phase_token-1) & (inner_state'=inner_state+8)  & (state_1'=BROADCAST) & (state_2'=BROADCAST) & (turn_token'=0); //line 61
 endmodule
 
 //MODEL RENAMING
