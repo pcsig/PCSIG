@@ -49,8 +49,6 @@ module node_i
 timer_i : [0..timeout] init 0; //message timeout
 counter : [0..MAX_TIMER] init 0; 
 
-//SYNCHRONIZED_i : bool init SYNC;	
-
 view_pi_pi : [0..MAX_TIMER] init 0;
 view_pi_pj : [0..MAX_TIMER] init 0;
 
@@ -101,12 +99,12 @@ SYNCHRONIZED : bool init SYNC;
 // change the ALL states from BROADCAST TO WAIT - RESET
 [] new_phase & phase_token=0 & inner_state=8  & end_process=1 
 -> (phase_token'=0) & (inner_state'=0)  & (state_i'=BROADCAST) 
-& (state_j'=BROADCAST) & (turn_token'=0); //line 66
+& (state_j'=BROADCAST) & (turn_token'=0); 
 
 // change the ALL states from WAIT TO BROADCAST 
 [] new_phase & phase_token=1 & end_process=0 
 -> (phase_token'=phase_token-1) & (inner_state'=0)  & (state_i'=BROADCAST) 
-& (state_j'=BROADCAST) & (turn_token'=0); //line 66
+& (state_j'=BROADCAST) & (turn_token'=0); 
 
 //TASK 3
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT
@@ -114,7 +112,7 @@ SYNCHRONIZED : bool init SYNC;
 -> (SYNCHRONIZED'=true) & (inner_state'=inner_state+8); 
 
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT 
-& timer_i=timeout & inner_state=0 & view_pi_pj!=view_pj_pj & view_pj_pi!=view_pi_pi
+& timer_i=timeout & inner_state=0 & (view_pi_pj!=view_pj_pj | view_pj_pi!=view_pi_pi)
 -> (SYNCHRONIZED'=false) & (inner_state'=inner_state+8);
 
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT 
