@@ -1,0 +1,94 @@
+#!/usr/bin/python
+# coding: utf-8
+import socket
+import time
+import json
+import threading
+
+l_id = 'p'
+v_id = l_id
+c = 'Platoon'
+Buffer = []
+TO = 30
+timer = 0
+timestamp = 0
+aux_timestamp = 0
+V_temp = []
+V_sync = []
+Buffer_recv = []
+id = 0
+
+sem = threading.Semaphore()
+
+leaderp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+host = 'localhost'
+port = 44444
+
+leaderp_socket.bind((host, port))
+
+def enviar():
+    global timestamp
+    global timer
+    global V_Temp
+    global Buffer
+    global l_id
+    global id, sem
+    if timer == 5:
+        M = ['l_p', 'f1_p']
+        id += 1
+        v = (v_id + str(id), M, c)
+        timestamp += 5
+        sem.acquire()
+        Buffer.insert(0, list(v))
+        m = l_id, Buffer, timestamp
+        sem.release()
+        message = json.dumps(m)
+        leaderp_socket.sendto(message.encode(), (host, 44443))
+        timer = 0
+
+def manutencao(*args):
+    global V_temp, sem
+    global V_sync
+    sem.acquire()
+    V_temp = []
+    V_temp = list(args)
+    lideres = []
+    for msg in V_temp:
+        if msg[0][0] != l_id:
+            if msg[0][0] not in lideres:
+                lideres.append(msg[0][0])
+    for lider in lideres:
+        for msg in V_temp:
+            if msg[0][0] == lider:
+                V_sync = msg
+        print V_sync[1][0]
+    sem.release()
+
+def receber():
+    global Buffer
+    global timestamp
+    global aux_timestamp
+    global V_temp
+    global Buffer_recv
+    while True:
+        data, addr = leaderp_socket.recvfrom(4096000)
+        B2 = json.loads(data)
+        if data:
+            Buffer.append(B2)
+            if timestamp == aux_timestamp + 10:
+                sem.acquire()
+                aux_timestamp = timestamp
+                Buffer_recv = Buffer
+                Buffer = []
+                tarefa3 = threading.Thread(target=manutencao, args=Buffer_recv)
+                tarefa3.start()
+                sem.release()
+
+tarefa2 = threading.Thread(target=receber)
+tarefa2.start()
+
+while True:
+    time.sleep(1)
+    timer = timer + 1
+    tarefa1 = threading.Thread(target=enviar)
+    tarefa1.start()
