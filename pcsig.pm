@@ -47,7 +47,7 @@ formula broadcast_phase = mod(phase_token,2) = 0;
 module node_i
 
 timer_i : [0..timeout] init 0; //message timeout
-counter : [0..MAX_TIMER] init 0; 
+vid_i : [0..MAX_TIMER] init 0; 
 
 view_pi_pi : [0..MAX_TIMER] init 0;
 view_pi_pj : [0..MAX_TIMER] init 0;
@@ -55,71 +55,74 @@ view_pi_pj : [0..MAX_TIMER] init 0;
 new_view_id_i_i :[0..MAX_TIMER] init 0;
 new_view_id_i_j :[0..MAX_TIMER] init 0;
 
-//RESET OF CLOCKS - PART 2
+//V_SYNC ESTA SINCRONIZADA. TODOS AS INFORMACOES QUE SERAO ENVIADAS PARA OS VEICULOS SAO RESETADAS (-> LINHA 99)
 []broadcast_phase & context_i & my_turn & state_i=BROADCAST & inner_state=8 -> 
-(inner_state'=8) & (counter'=0) & (new_view_id_i_i'=NO_DATA) & (new_view_id_i_j'=NO_DATA) & (view_pi_pi'=0) & (view_pi_pj'=0) &
+(inner_state'=8) & (vid_i'=0) & (new_view_id_i_i'=NO_DATA) & (new_view_id_i_j'=NO_DATA) & (view_pi_pi'=0) & (view_pi_pj'=0) &
 (turn_token'= turn_token + 1) & (timer_i'=0)  & (end_process'=1); 
 
-//TASK 1
-//THERE WAS A CHANGE OF VIEW A VALUE WAS INCREMENTED IN 
-[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & inner_state=0 & counter<MAX_TIMER -> (inner_state'=inner_state+1) & (counter'=counter+1); 
+//TAREFA 1 - TAREFA RESPONSAVEL PELO ENVIO PERIODICO DE MENSAGENS
+//O LIDER INCREMENTA UM VALOR AO SEU VID (-> LINHA 68) 
+[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & inner_state=0 & vid_i<MAX_TIMER -> (inner_state'=inner_state+1) & (vid_i'=vid_i+1); 
 
-//PUT THE VIEW IN MACRO VIEW
-[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & inner_state=1 -> (turn_token'= turn_token + 1)  & (new_view_id_i_i'= counter) & (inner_state'=0); 
+//ATUALIZA O VALOR DO VID A SUA VISAO (-> LINHA 71)
+[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & inner_state=1 -> (turn_token'= turn_token + 1)  & (new_view_id_i_i'= vid_i) & (inner_state'=0); 
 
-//THE LEADER SEND MESSAGE
-[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & counter<MAX_TIMER & (inner_state=2)->  
+//O LIDER ENVIA A MENSAGEM COM A SUA VISAO E O QUE ELE SABE POR OUTRO LIDER (-> LINHA 95 )
+[]broadcast_phase & context_i & my_turn & state_i=BROADCAST & vid_i<MAX_TIMER & (inner_state=2)->  
 (view_pi_pi'=new_view_id_i_i) & (view_pi_pj'=new_view_id_i_j) & (turn_token'= turn_token + 1) & (inner_state'=2) & (end_process'=0);
 
-//PHASE WAIT
-//< TASK 2
-//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VISION IF 
+//TAREFA 2 - TAREFA RESPONSAVEL PELO RECEBIMENTO DAS MENSAGENS
+//TODAS AS MENSAGENS QUE SAO RECEBIDAS SAO ARMAZENADAS ENQUANTO O TEMPO FOR < TIMEOUT (-> LINHA 104) 
 []wait_phase & context_i & my_turn & state_i=WAIT & timer_i<timeout & inner_state=0 & view_pi_pj>=0 & view_pj_pi>=0 
--> (1-packet_loss_rate):(new_view_id_i_j'=send_timer_2) & (view_pi_pj'=send_timer_2) & (timer_i'=timer_i+1) & (turn_token'= turn_token + 1) & (inner_state'=0) 
-+ (packet_loss_rate): (timer_i'=timer_i+1) & (turn_token'= turn_token + 1) & (inner_state'=0);
+-> (1-packet_loss_rate):(new_view_id_i_j'=vid_j) & (view_pi_pj'=vid_j) & (timer_i'=timer_i+1) & (turn_token'= turn_token + 1) & (inner_state'=0) & (end_process'=0)
++ (packet_loss_rate): (timer_i'=timer_i+1) & (turn_token'= turn_token + 1) & (inner_state'=0) & (end_process'=0);
 
 //= TIMEOUT. 
-//THE DESTINATION LEADER WILL ADD TO YOUR MACRO VIEW IF 
+//TODAS AS MENSAGENS QUE SAO RECEBIDAS SAO ARMAZENADAS ENQUANTO O TEMPO FOR < TIMEOUT (-> LINHA 110) 
 []wait_phase & context_i & my_turn & state_i=WAIT & timer_i=timeout & inner_state=0 & view_pi_pj>=0 & view_pj_pi>=0 
--> (1-packet_loss_rate):(new_view_id_i_j'=send_timer_2) & (view_pi_pj'=send_timer_2) & (turn_token'= turn_token + 1) & (inner_state'=0) & 
+-> (1-packet_loss_rate):(new_view_id_i_j'=vid_j) & (view_pi_pj'=vid_j) & (turn_token'= turn_token + 1) & (inner_state'=0) & 
 (end_process'=2) + (packet_loss_rate): (turn_token'= turn_token + 1) & (inner_state'=0) & (end_process'=2); 
 
 endmodule
 
 module change_state
 SYNCHRONIZED : bool init SYNC;	
-
+//PREPARANDO PARA ENVIAR A MENSAGEM (-> LINHA 71)
 [] new_phase & phase_token=0 & inner_state=0
 -> (turn_token'=0) & (inner_state'=2);
 
-// change the ALL states from BROADCAST TO WAIT
-[] new_phase & phase_token=0 & inner_state=2
+// MUDANCA DA FASE BROADCAST PARA FASE DE ESPERA (-> LINHA 76 SE > TIMEOUT, LINHA 82 SE = TIMEOUT)
+[] new_phase & phase_token=0 & inner_state=2 & end_process=0
 -> (phase_token'=phase_token+1) & (inner_state'=0) & (state_i'=WAIT) & (state_j'=WAIT) & (turn_token'=0);
 
-// change the ALL states from BROADCAST TO WAIT - RESET
+// PRERANDO O LIDER PARA ENVIAR A MENSAGEM NOVAMENTE (-> LINHA 64)
 [] new_phase & phase_token=0 & inner_state=8  & end_process=1 
 -> (phase_token'=0) & (inner_state'=0)  & (state_i'=BROADCAST) 
 & (state_j'=BROADCAST) & (turn_token'=0); 
 
-// change the ALL states from WAIT TO BROADCAST 
-[] new_phase & phase_token=1 & end_process=0 
+// MUDANCA DA FASE ESPERA PARA FASE DE BROADCAST (-> LINHA 65 )
+[] new_phase & phase_token=1 & inner_state=0 & end_process=0 
 -> (phase_token'=phase_token-1) & (inner_state'=0)  & (state_i'=BROADCAST) 
 & (state_j'=BROADCAST) & (turn_token'=0); 
 
-//TASK 3
+//TAREFA 3
+//MANUTENCAO DAS VISOES (SE ESTIVER SINCRONIZADO (-> LINHA 127)
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT
 & timer_i=timeout & inner_state=0 & view_pi_pj=view_pj_pj & view_pj_pi=view_pi_pi
 -> (SYNCHRONIZED'=true) & (inner_state'=inner_state+8); 
 
+//MANUTENCAO DAS VISOES (SE ESTIVER SINCRONIZADO (-> linha 121)
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT 
 & timer_i=timeout & inner_state=0 & (view_pi_pj!=view_pj_pj | view_pj_pi!=view_pi_pi)
 -> (SYNCHRONIZED'=false) & (inner_state'=inner_state+8);
 
+//V_SYNC SINCRONIZADA (MUDANCA DE FASE PARA LIMPEZA DOS DADOS QUE SERAO ENVIADOS PARA OUTROS LIDERES -> LINHA 59)
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT 
 & timer_i=timeout & (SYNCHRONIZED=false) &  inner_state=8
 -> (phase_token'=phase_token-1) & (inner_state'=8)  & (state_i'=BROADCAST) 
 & (state_j'=BROADCAST) & (turn_token'=0) & (end_process'=end_process-1); 
 
+//V_SYNC SINCRONIZADA (MUDANCA DE FASE PARA LIMPEZA DOS DADOS QUE SERAO ENVIADOS PARA OUTROS LIDERES -> LINHA 59)
 [] new_phase & phase_token=1 & end_process=2 & state_i=WAIT & state_j = WAIT 
 & timer_i=timeout & (SYNCHRONIZED=true) &  inner_state=8
 -> (phase_token'=phase_token-1) & (inner_state'=8)  & (state_i'=BROADCAST) 
@@ -128,6 +131,6 @@ SYNCHRONIZED : bool init SYNC;
 endmodule
 
 //MODEL RENAMING
-module node_j=node_i[N1=N2,state_i=state_j,timer_i=timer_2,context_i=context_j,counter=send_timer_2,new_view_id_i_i=new_view_id_j_j,new_view_id_i_j=new_view_id_j_i,
-view_pi_pi=view_pj_pj,view_pi_pj=view_pj_pi,SYNCHRONIZED_i=SYNCHRONIZED_2]
+module node_j=node_i[N1=N2,state_i=state_j,timer_i=timer_j,context_i=context_j,vid_i=vid_j,new_view_id_i_i=new_view_id_j_j,new_view_id_i_j=new_view_id_j_i,
+view_pi_pi=view_pj_pj,view_pi_pj=view_pj_pi]
 endmodule
