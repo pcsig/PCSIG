@@ -1,7 +1,9 @@
-P=? [ (state_1=BROADCAST) U (state_1=WAIT) ]
+E [ F "deadlock" ]
 
-P=? [ F<150 SYNCHRONIZED_1=true&SYNCHRONIZED_2=true ]
+A [ F ((taxaDePerdaDeMensagens=0 & etapaManutencao=true) & (X (visoesSincronizadas_i=true) & (visoesSincronizadas_j=true))) ]
 
-E [ F (inner_state=8)&(SYNCHRONIZED_1=true&SYNCHRONIZED_2=true)]
+R=? [ F x=11 ]
 
-S=? [(SYNCHRONIZED_1=true&SYNCHRONIZED_2=true)]
+E [ F (visoesSincronizadas_i=true) & (visoesSincronizadas_j=true)&(taxaDePerdaDeMensagens=1) ]
+
+E [ F (visoesSincronizadas_i=true) & (visoesSincronizadas_j=true)&(taxaDePerdaDeMensagens<1) ]
