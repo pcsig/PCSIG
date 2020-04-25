@@ -29,6 +29,9 @@ def enviarMensagem(mensagem, total_pelotoes, valor):
     global backoff
     global timestamp
     global lider
+    
+    ########################## Simula backoff time ##########################
+    
     latencia = float(total_pelotoes)*0.02701
     backoff = random.uniform(0.001,0.030)
     time.sleep(latencia+backoff) #período de back-off aleatório
@@ -50,7 +53,7 @@ def enviarMensagem(mensagem, total_pelotoes, valor):
             arq.write(str('{0:.6f}'.format(time.time())))
             arq.write(',')
     
-    ##########################################################
+    ########################################################################
 
 
 
