@@ -114,8 +114,6 @@ def manutencao(*args):
             if m[0][0] == lider:
                 vid_aux = m
         mensagensTemporarias_aux.append(vid_aux)
-    #Segui a ideia do pseudocódigo, analisando as informações contidas nas visões conhecidas. Busquei as informações do v_id utilizando
-    #recursos de consulta à lista, por isso que não está sendo demonstrado visõesConhecidas na TAREFA T2 manutenção.
     #linha 33 - para cada v em em visoesConhecidas faça:
     for vid in mensagensTemporarias_aux:
         vis = list(visao)
