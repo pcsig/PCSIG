@@ -240,6 +240,7 @@ while True:
                 num = len(lista3)
                 lista4.append(num)
             soma = sum(lista4)
+            result2 = round(soma/((total_pelotoes*(total_pelotoes-1))*(int(qtd))),4)
             print 'Sincronizações bidirecionais com o líder ', idLider, result2*100, '%'
            
            ############################################# Análise das colisões #############################################
