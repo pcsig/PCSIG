@@ -24,7 +24,7 @@ lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 lider_socket.bind((host, port))
 
-def enviarMensagem(mensagem, total_pelotoes, valor):
+def enviarMensagem(mensagem, valor):
     global latencia
     global backoff
     global timestamp
