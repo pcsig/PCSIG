@@ -14,7 +14,7 @@ timestamp = time.time()
 colisoes = []
 conjunto_colisoes = set()
 
-backoff = 0
+t_aleatorio = 0
 latencia = 0.0
 host = '255.255.255.255'
 port = 44444
@@ -29,14 +29,14 @@ def enviarMensagem(mensagem, valor):
     global backoff
     global timestamp
     global lider
-    latencia = 0.02701 #float(total_pelotoes)*0.02701
-    backoff = random.uniform(0.001,0.030)
+    latencia = 0.02701 
+    t_aleatorio = random.uniform(0.001,0.030)
 
     ###################### Simulando perda de mensagens #####################
 
     resultado = np.arange (start = 1, stop = 3)
     perdaDeMensagens = np.random.choice (a = resultado, p = [1-valor, valor])
-    time.sleep(latencia+backoff) #período de back-off aleatório
+    time.sleep(latencia+t_aleatorio) #deslocamento de tempo gerado aleatoriamente
     if perdaDeMensagens == 1:
         message = json.dumps(mensagem)
         lider_socket.sendto(message.encode(), (host, port))
