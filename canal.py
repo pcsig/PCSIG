@@ -26,7 +26,7 @@ lider_socket.bind((host, port))
 
 def enviarMensagem(mensagem, valor):
     global latencia
-    global backoff
+    global t_aleatorio
     global timestamp
     global lider
     latencia = 0.02701 
