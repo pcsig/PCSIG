@@ -24,7 +24,7 @@ def enviarMensagem(mensagem, valor):
     latencia = 0.02701
     t_aleatorio = random.uniform(0.001,0.030)
 
-    ###################### Simulando perda de mensagens #####################
+    ####################### Simulando perda e atraso de mensagens #####################
 
     resultado = np.arange (start = 1, stop = 3)
     perdaDeMensagens = np.random.choice (a = resultado, p = [1-valor, valor])
@@ -36,7 +36,7 @@ def enviarMensagem(mensagem, valor):
         message = json.dumps("lost")
         lider_socket.sendto(message.encode(), (host, port))
 
-    ######################  Contabilizando as colisões #####################
+    ###########################  Contabilizando as colisões ###########################
 
     if message:
         with open('colisoes.txt', 'a') as arq:
