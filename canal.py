@@ -10,12 +10,10 @@ import numpy as np
 import sys
 import random
 
-timestamp = time.time()
 colisoes = []
 conjunto_colisoes = set()
 
 t_aleatorio = 0
-latencia = 0.0
 host = '255.255.255.255'
 port = 44444
 
@@ -25,10 +23,7 @@ lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 lider_socket.bind((host, port))
 
 def enviarMensagem(mensagem, valor):
-    global latencia
     global t_aleatorio
-    global timestamp
-    global lider
     latencia = 0.02701 
     t_aleatorio = random.uniform(0.001,0.030)
 
