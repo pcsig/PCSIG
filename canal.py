@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # coding: utf-8
 
 #Envio de mensagens
@@ -10,10 +9,6 @@ import numpy as np
 import sys
 import random
 
-colisoes = []
-conjunto_colisoes = set()
-
-t_aleatorio = 0
 host = '255.255.255.255'
 port = 44444
 
@@ -23,15 +18,17 @@ lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 lider_socket.bind((host, port))
 
 def enviarMensagem(mensagem, valor):
-    global t_aleatorio
-    latencia = 0.02701 
+    timestamp = time.time()
+    colisoes = []
+    conjunto_colisoes = set()
+    latencia = 0.02701
     t_aleatorio = random.uniform(0.001,0.030)
 
     ###################### Simulando perda de mensagens #####################
 
     resultado = np.arange (start = 1, stop = 3)
     perdaDeMensagens = np.random.choice (a = resultado, p = [1-valor, valor])
-    time.sleep(latencia+t_aleatorio) #deslocamento de tempo gerado aleatoriamente
+    time.sleep(latencia+t_aleatorio)
     if perdaDeMensagens == 1:
         message = json.dumps(mensagem)
         lider_socket.sendto(message.encode(), (host, port))
