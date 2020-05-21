@@ -93,15 +93,22 @@ def enviar():
     ############## marcação da latência (envio) ##############
     message = json.dumps(mensagem)
     lider_socket.sendto(message.encode(), (host, 44443))
-    with open('marcTempo.txt', 'a') as arq:
+    with open('marcTempo.csv', 'a') as arq:
         arq.write('E')
         arq.write(' ; ')
         arq.write(str(mensagem[0]))
+        arq.write(' ; ')
         arq.write(tempo)
         arq.write(' ; ')
         arq.write(str(id))
         arq.write('\n')
     ##########################################################
+
+    #############  Contabilizando as colisões #############
+    with open('colisoes.txt', 'a') as arq:
+        arq.write(str('{0:.6f}'.format(time.time())))
+        arq.write(',')
+    #######################################################
 
 def manutencao(*args):
     global mensagensTemporarias, sem
@@ -172,12 +179,13 @@ def receber():
         if receberMensagem2 != "lost":
             receberMensagem = receberMensagem2
             ############## marcação da latência (recebimento) ##############
-            with open('marcTempo.txt', 'a') as arq:
+            with open('marcTempo.csv', 'a') as arq:
                 arq.write(' R ')
                 arq.write(' ; ')
                 arq.write(idLider)
                 arq.write(' ; ')
                 arq.write(str(receberMensagem[0]))
+                arq.write(' ; ')
                 arq.write(tempo)
                 arq.write(' ; ')
                 arq.write(str(receberMensagem[1][2]))
