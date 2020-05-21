@@ -7,11 +7,10 @@ import threading
 import numpy as np
 import sys
 import random
-from canal import enviarMensagem
 
 idLider = str(sys.argv[1])              #Define idLider
 valor = float(sys.argv[2])              #Simulação de perda de mensagens
-total_pelotoes = float(sys.argv[3])     #Quantidade de pelotões que deseja simular 
+total_pelotoes = float(sys.argv[3])     #Quantidade de pelotões que deseja simular
 tempoLimite = int(sys.argv[4])          #Valor do tempoLimite (1000; 2000; 3000; 4000; 5000 ms)
 lista_mensagens = []
 conjunto_colisoes = set()
@@ -38,12 +37,13 @@ envios = 0
 sem = threading.Semaphore()
 
 host = '255.255.255.255'
-port = 44444
 
 lider_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-lider_socket.bind((host, port))
+lider_socket.bind((host, 44444))
+
+#encaminharMensagem(valor)
 
 #TAREFA T1: envio periódico de mensagens
 
@@ -82,13 +82,27 @@ def enviar():
             #linha 16 visoesConhecidas <- visoesConhecidas U {m.visao}
             visoesConhecidas.append(v_aux)
     sem.acquire()
-    visao = v_id, idVisao, membros, contexto
+    id = random.randint(0,100000)
+    tempo = str('{0:.6f}'.format(time.time()))
+    #visao = v_id, idVisao, membros, contexto
+    visao = v_id, idVisao, [id,tempo], contexto
     #linha 19 mensagem <- (idLider,visao,visoesConhecidas)
-    mensagem = idLider, list(visao), visoesConhecidas 
+    mensagem = idLider, list(visao), visoesConhecidas
     sem.release()
     #linha 20 enviarMensagem(mensagem)
-    enviarMensagem(mensagem, total_pelotoes, valor)
-    
+    ############## marcação da latência (envio) ##############
+    message = json.dumps(mensagem)
+    lider_socket.sendto(message.encode(), (host, 44443))
+    with open('marcTempo.txt', 'a') as arq:
+        arq.write('E')
+        arq.write(' ; ')
+        arq.write(str(mensagem[0]))
+        arq.write(tempo)
+        arq.write(' ; ')
+        arq.write(str(id))
+        arq.write('\n')
+    ##########################################################
+
 def manutencao(*args):
     global mensagensTemporarias, sem
     global visoesSincronizadas
@@ -129,7 +143,7 @@ def manutencao(*args):
                     arq_vis.write(vid[0])
                     arq_vis.write('\n')
                 #linha 35 - visoesTemporarias <- visoesTemporarias U {v}
-                visoesTemporarias.append(vid[0:-1])     
+                visoesTemporarias.append(vid[0:-1])
     #linha 40 - visoesSincronizadas <- visoesTemporarias
     visoesSincronizadas = visoesTemporarias
     print 'Visoes sincronizadas do lider: ', idLider, visoesSincronizadas
@@ -153,9 +167,24 @@ def receber():
     #linha 26 - enquanto True faça:
     while True:
         data, addr = lider_socket.recvfrom(4096)
+        tempo = str('{0:.6f}'.format(time.time()))
         receberMensagem2 = json.loads(data)
         if receberMensagem2 != "lost":
             receberMensagem = receberMensagem2
+            ############## marcação da latência (recebimento) ##############
+            with open('marcTempo.txt', 'a') as arq:
+                arq.write(' R ')
+                arq.write(' ; ')
+                arq.write(idLider)
+                arq.write(' ; ')
+                arq.write(str(receberMensagem[0]))
+                arq.write(tempo)
+                arq.write(' ; ')
+                arq.write(str(receberMensagem[1][2]))
+                arq.write(' ; ')
+                arq.write(str(float(tempo)-float(receberMensagem[1][2][1])))
+                arq.write('\n')
+            ################################################################
         else:
             receberMensagem = [idLider, [idLider, 0, ["Platoon"], []]]
         #linha 27 - mensagensRecebidas <- mensagensRecebidas U {receberMensagem()}
@@ -170,23 +199,7 @@ def receber():
             t2_manutencao = threading.Thread(target=manutencao, args=mensagensTemporarias)
             t2_manutencao.start()
             sem.release()
-        
-        
-        ################################## Lod de eventos ################################      
-        
-        with open('recebimento_envio.txt', 'a') as arq:
-            arq.write(str(i1))
-            arq.write(' - ')
-            arq.write(' Recebidas ')
-            arq.write(str(idLider))
-            arq.write('\n')
-            arq.write(str(i2))
-            arq.write(' - ')
-            arq.write(' Perdidas ')
-            arq.write(str(idLider))
-            arq.write('\n')
 
-        ##################################################################################
 tarefa2 = threading.Thread(target=receber)
 tarefa2.start()
 
@@ -226,7 +239,7 @@ while True:
             arq = open('/home/cleber/Defesa/visaoSincronizada.txt', 'r')
             texto = arq.readlines()
             arq.close()
-            result = round(len(texto)/((total_pelotoes*(total_pelotoes-1))*(int(qtd))),4) 
+            result = round(len(texto)/((total_pelotoes*(total_pelotoes-1))*(int(qtd))),4)
             print 'Sincronizações unidirecionais com o líder ', idLider, result*100, '%'
             lista1 = [str(float(lista)) for lista in range(1,101)]
             for l0 in lista1:
@@ -240,9 +253,9 @@ while True:
             soma = sum(lista4)
             result2 = round(soma/((total_pelotoes*(total_pelotoes-1))*(int(qtd))),4)
             print 'Sincronizações bidirecionais com o líder ', idLider, result2*100, '%'
-           
+
            ############################################# Análise das colisões #############################################
-            
+
             if valor == 0:
                 arq = open('/home/cleber/Defesa/colisoes.txt', 'r')
                 texto = arq.readlines()
@@ -251,7 +264,7 @@ while True:
                     novo_conjunto = elemento.split(",")
                     for valor in novo_conjunto:
                         conjunto_colisoes.add(valor)
-                resultado = int(total_pelotoes*(qtd*envios)) - (len(conjunto_colisoes)-(total_pelotoes+1))  
+                resultado = int((total_pelotoes)*(qtd*envios)) - (len(conjunto_colisoes)-(total_pelotoes+1))
                 print resultado, 'Colisões'
             else:
                 print 'Para testar as colisões é necessário considerar uma rede sem perda de mensagens'
