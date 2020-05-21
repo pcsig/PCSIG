@@ -32,14 +32,21 @@ def buffer():
     while True:
         data, addr = lider_socket.recvfrom(4096)
         recb_canal = json.loads(data)
-        print q.qsize()
         if recb_canal:
             q.put(recb_canal)
-        ###########################  Contabilizando as colisões ###########################
-            with open('colisoes.txt', 'a') as arq:
-                arq.write(str('{0:.6f}'.format(time.time())))
-                arq.write(',')
-        ###################################################################################
+        # ###########################  Contabilizando as colisões ###########################
+        #     with open('colisoes.txt', 'a') as arq:
+        #         arq.write(str('{0:.6f}'.format(time.time())))
+        #         arq.write(',')
+        # ###################################################################################
+
+        ######################### Fila #########################
+        with open('fila.csv', 'a') as arq:
+            arq.write(str(recb_canal[0]))
+            arq.write(' ; ')
+            arq.write(str(q.qsize()))
+            arq.write('\n')
+        ########################################################
 
 def encaminhar():
     while True:
