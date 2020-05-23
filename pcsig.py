@@ -35,6 +35,7 @@ cont_envia = 0
 qtd = 0
 envios = 0
 sem = threading.Semaphore()
+t_aleatorio = random.uniform(0.001,0.003)
 
 host = '255.255.255.255'
 
@@ -43,7 +44,6 @@ lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 lider_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 lider_socket.bind((host, 44444))
 
-#encaminharMensagem(valor)
 
 #TAREFA T1: envio periódico de mensagens
 
@@ -56,6 +56,7 @@ def enviar():
     global membros
     global visoesConhecidas
     global valor
+    global cronometro
     lideres = []
     v_aux = []
     #linha 9 - para cada m em mensagensRecebidas faça:
@@ -82,8 +83,10 @@ def enviar():
             #linha 16 visoesConhecidas <- visoesConhecidas U {m.visao}
             visoesConhecidas.append(v_aux)
     sem.acquire()
-    id = random.randint(0,100000)
+    id = random.randint(0,1000000000)
     tempo = str('{0:.6f}'.format(time.time()))
+    if cronometro == 100:
+        idVisao += 1
     #visao = v_id, idVisao, membros, contexto
     visao = v_id, idVisao, [id,tempo], contexto
     #linha 19 mensagem <- (idLider,visao,visoesConhecidas)
@@ -174,11 +177,12 @@ def receber():
     #linha 26 - enquanto True faça:
     while True:
         data, addr = lider_socket.recvfrom(4096)
-        tempo = str('{0:.6f}'.format(time.time()))
+        #tempo = str('{0:.6f}'.format(time.time()))
         receberMensagem2 = json.loads(data)
         if receberMensagem2 != "lost":
             receberMensagem = receberMensagem2
             ############## marcação da latência (recebimento) ##############
+            tempo = str('{0:.6f}'.format(time.time()))
             with open('marcTempo.csv', 'a') as arq:
                 arq.write(' R ')
                 arq.write(' ; ')
@@ -217,12 +221,10 @@ while True:
     tarefa1 = threading.Thread(target=enviar)
     tarefa1.start()
     #linha 21 - sleep(periodo)
-    time.sleep(periodo)
+    time.sleep(periodo+t_aleatorio)
     cronometro += 0.5
     cont_envia += 1
-
 ############################# CONTABILIZAÇÃO E VALIDAÇÃO DOS DADOS ##############################
-
     if cont_envia == 201:
         try:
             if tempoLimite == 1000:
