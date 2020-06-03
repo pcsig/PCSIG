@@ -22,7 +22,7 @@ lider_socket.bind((host, 44443))
 timestamp = time.time()
 colisoes = []
 conjunto_colisoes = set()
-latencia = 0.025
+latencia = 0.0022
 l_msn = []
 q = queue.Queue()
 tam_fila = 0
