@@ -37,8 +37,7 @@ cont_envia = 0
 qtd = 0
 envios = 0
 sem = threading.Semaphore()
-t_aleatorio = random.uniform(0.000000001,0.005)
-contador =0.0
+t_aleatorio = random.uniform(0.000000001,0.008)
 
 host = '255.255.255.255'
 
@@ -68,14 +67,19 @@ def enviar():
     lideres = []
     v_aux = []
     tempo = str('{0:.8f}'.format(cronometro))
+    #linha 9 - para cada m em mensagensRecebidas faça:
     for m in mensagensRecebidas:
+        #linha 10 - para cada v em visoesConhecidas faça:
         for v in visoesConhecidas:
             if v is None:
                 print 'Visoes Conhecidas vazias'
-                if m[0][0] == v[0][0]:
-                    visoesConhecidas.remove(v)
-                else:
-                    print 'nok'
+            #linha 11 - se v.lider = m.idLider então:
+            if m[0][0] == v[0][0]:
+                #linha 12 - visoesConhecidas <- visoesConhecidas \ {v}
+                visoesConhecidas.remove(v)
+            else:
+                pass
+        #linha 15
         if m[0][0] != idLider:
             if m[0][0] not in lideres:
                 lideres.append(m[0][0])
@@ -84,14 +88,17 @@ def enviar():
             if m[0][0]==lider:
                 v_aux = m[1][0:2]
         if v_aux not in visoesConhecidas:
+            #linha 16 visoesConhecidas <- visoesConhecidas U {m.visao}
             visoesConhecidas.append(v_aux)
     sem.acquire()
     id = random.randint(0,1000000000)
+    # tempo = str('{0:.8f}'.format(cronometro))
     visao = v_id, idVisao, [id,tempo], contexto
+    #linha 19 mensagem <- (idLider,visao,visoesConhecidas)
     mensagem = idLider, list(visao), visoesConhecidas
     sem.release()
+    #linha 20 enviarMensagem(mensagem)
     ############## marcação da latência (envio) ##############
-    time.sleep(t_aleatorio)
     message = json.dumps(mensagem)
     lider_socket.sendto(message.encode(), (host, 44443))
     with open('marcTempo.csv', 'a') as arq:
@@ -119,39 +126,40 @@ def manutencao(*args):
     lideres = []
     vid2 = []
     mensagensTemporarias_aux = []
-    if mensagensTemporarias != None:
+    #linha 31 - para cada m em mensagensTemporarias:
+    for m in mensagensTemporarias:
+        #linha 32 - se m.idLider != idLider:
+        if m[0][0] != idLider:
+            if m[0][0] not in lideres:
+                lideres.append(m[0][0])
+    for lider in lideres:
         for m in mensagensTemporarias:
-            if m[0][0] != idLider:
-                if m[0][0] not in lideres:
-                    lideres.append(m[0][0])
-        for lider in lideres:
-            for m in mensagensTemporarias:
-                if m[0][0] == lider:
-                    vid_aux = m
-            mensagensTemporarias_aux.append(vid_aux)
-        for vid in mensagensTemporarias_aux:
-            vis = list(visao)
-            v =  vis[0:2]
-            res = [str(v_id) for v_id in vid[2]]
-            for l2 in res:
-                vid2 = (l2[2:-1])
-                if str(v)[1:-1] == vid2:
-                    with open('visaoSincronizada.txt', 'a') as arq_vis:
-                        arq_vis.write(str(round(cronometro,1)))
-                        arq_vis.write(str(idLider))
-                        arq_vis.write(vid[0])
-                        arq_vis.write('\n')
-                    visoesTemporarias.append(vid[0:-1])
-        visoesSincronizadas = visoesTemporarias
-        print 'Visoes sincronizadas do lider: ', idLider, visoesSincronizadas
-        del visoesTemporarias[:]
-        del mensagensRecebidas[:]
-    else:
-        del visoesSincronizadas[:]
-        print 'Visoes sincronizadas do lider: ', idLider, visoesSincronizadas
-        del visoesTemporarias[:]
-        del mensagensRecebidas[:]
-        pass
+            if m[0][0] == lider:
+                vid_aux = m
+        mensagensTemporarias_aux.append(vid_aux)
+    #linha 33 - para cada v em em visoesConhecidas faça:
+    for vid in mensagensTemporarias_aux:
+        vis = list(visao)
+        v =  vis[0:2]
+        res = [str(v_id) for v_id in vid[2]]
+        for l2 in res:#linha 10 - para cada v em visoesConhecidas fala:
+            vid2 = (l2[2:-1])
+            #linha 34 - v = visao
+            if str(v)[1:-1] == vid2:
+                with open('visaoSincronizada.txt', 'a') as arq_vis:
+                    arq_vis.write(str(round(cronometro,1)))
+                    arq_vis.write(str(idLider))
+                    arq_vis.write(vid[0])
+                    arq_vis.write('\n')
+                #linha 35 - visoesTemporarias <- visoesTemporarias U {v}
+                visoesTemporarias.append(vid[0:-1])
+    #linha 40 - visoesSincronizadas <- visoesTemporarias
+    visoesSincronizadas = visoesTemporarias
+    print 'Visoes sincronizadas do lider: ', idLider, visoesSincronizadas
+    #linha 41 - visoesTemporarias <- 0
+    del visoesTemporarias[:]
+    #linha 42 - mensagensRecebidas <- 0
+    del mensagensRecebidas[:]
 
 #TAREFA T2: recebimento de mensagens
 def receber():
@@ -162,56 +170,59 @@ def receber():
     global sem
     global tempoLimite
     global lista_mensagens
+    #linha 25 - tempAux <- 0
     tempAux = 0.0
     t = tempoLimite/1000
-    ultimo = []
+    #linha 26 - enquanto True faça:
     while True:
         data, addr = lider_socket.recvfrom(4096)
-        receberMensagem = json.loads(data)
-        tempo = str('{0:.8f}'.format(cronometro))
-        ############## marcação da latência (recebimento) ##############
-        with open('marcTempo.csv', 'a') as arq:
-            arq.write(' R ')
-            arq.write(' ; ')
-            arq.write(idLider)
-            arq.write(' ; ')
-            arq.write(str(receberMensagem[0]))
-            arq.write(' ; ')
-            arq.write(tempo)
-            arq.write(' ; ')
-            arq.write(str(receberMensagem[1][2]))
-            arq.write(' ; ')
-            arq.write(str(float(tempo)-float(receberMensagem[1][2][1])))
-            arq.write('\n')
-        ################################################################
-
+        #tempo = str('{0:.8f}'.format(time.time()))
+        receberMensagem2 = json.loads(data)
+        #print receberMensagem2
+        if receberMensagem2 != "lost":
+            receberMensagem = receberMensagem2
+            tempo = str('{0:.8f}'.format(cronometro))
+            ############## marcação da latência (recebimento) ##############
+            with open('marcTempo.csv', 'a') as arq:
+                arq.write(' R ')
+                arq.write(' ; ')
+                arq.write(idLider)
+                arq.write(' ; ')
+                arq.write(str(receberMensagem[0]))
+                arq.write(' ; ')
+                arq.write(tempo)
+                arq.write(' ; ')
+                arq.write(str(receberMensagem[1][2]))
+                arq.write(' ; ')
+                arq.write(str(float(tempo)-float(receberMensagem[1][2][1])))
+                arq.write('\n')
+            ################################################################
+        else:
+            receberMensagem = [idLider, [idLider, 0, ["Platoon"], []]]
+        #linha 27 - mensagensRecebidas <- mensagensRecebidas U {receberMensagem()}
         mensagensRecebidas.append(receberMensagem)
-        if round(cronometro,1) == int(tempAux) + t:
-            if mensagensRecebidas[:-1] != ultimo:
-                ultimo = mensagensRecebidas[:-1]
-                sem.acquire()
-                mensagensTemporarias = mensagensRecebidas
-                tempAux = round(cronometro,1)
-                t2_manutencao = threading.Thread(target=manutencao, args=mensagensTemporarias)
-                t2_manutencao.start()
-                sem.release()
-            else:
-                sem.acquire()
-                tempAux = round(cronometro,1)
-                print 'no else perdeu mensagem ', tempAux
-                t2_manutencao = threading.Thread(target=manutencao, args=mensagensTemporarias)
-                t2_manutencao.start()
-                pass
-                sem.release()
+        #linha 28 - se cronometro = tempAux + tempoLimite entao
+        gtgt = cronometro
+        if int(gtgt) == int(tempAux) + t:
+        #if round(cronometro,0) == tempAux + t:0
+            sem.acquire()
+            #linha 29 - mensagensTemporarias <- mensagensRecebidas
+            mensagensTemporarias = mensagensRecebidas
+            #linha 30 - tempAux <- cronometro
+            tempAux = round(cronometro,1)
+            t2_manutencao = threading.Thread(target=manutencao, args=mensagensTemporarias)
+            t2_manutencao.start()
+            sem.release()
 
 tarefa2 = threading.Thread(target=receber)
 tarefa2.start()
 
-def mandar():
+def manda():
     global cont_envia
     global valor
+    tarefa1 = threading.Thread(target=enviar)
+    tarefa1.start()
     cont_envia += 1
-    enviar()
 
 ############################# CONTABILIZAÇÃO E VALIDAÇÃO DOS DADOS ##############################
     if cont_envia == 201:
@@ -235,7 +246,7 @@ def mandar():
                 print('Valor de tempo inválido')
             lista4 = []
             lista5 = []
-            arq = open('/home/cleber/Defesa/visaoSincronizada.t    time.sleep(periodo)xt', 'r')
+            arq = open('/home/cleber/Defesa/visaoSincronizada.txt', 'r')
             texto = arq.readlines()
             arq.close()
             result = round(len(texto)/((total_pelotoes*(total_pelotoes-1))*(int(qtd))),4)
@@ -258,23 +269,18 @@ def mandar():
             raw_input()
 
 ############################## Relógio local ##############################
-def esperar(esperar):
-    tempoInicial = cronometro
-    while True:
-        tempoAtual, addr = relogio_socket.recvfrom(4096)
-        cronometro=json.loads(tempoAtual)
-        if cronometro - tempoInicial == espera:
-            return
 
 def relogioLocal(*args):
     global cronometro
-    global contador
     global t_aleatorio
     while True:
-        esperar(1)
+        data, addr = relogio_socket.recvfrom(4096)
         if data:
-            mandar()
-            esperar(5)
+            start = json.loads(data)
+            if start:
+                cronometro+=0.5
+                cronometro+=t_aleatorio
+                manda()
 tarefa4 = threading.Thread(target=relogioLocal)
 tarefa4.start()
 
