@@ -14,14 +14,14 @@ SEED = 11
 random.seed(SEED)
 np.random.seed(SEED)
 
-LATENCIA_CANAL = 20
+LATENCIA_CANAL = 25
 PERDA_CANAL = 0
 TEMPO_LIMITE = 1000
 
 TEMPO_ENVIO = 500
-T_ALEATORIO_MAX = 24
-QUANTIDADE_LIDERES = 14
-TEMPO_EXPERIMENTO = 102
+T_ALEATORIO_MAX = 8
+QUANTIDADE_LIDERES = 2
+TEMPO_EXPERIMENTO = 103
 
 environment = simpy.Environment()
 
@@ -29,7 +29,7 @@ environment = simpy.Environment()
 class Canal(object):
     pacotesPerdidos = 0
     tamanhoFilaNoTempo = {'tamanho':[], 'tempo': []}
-    todasTodasMensangesNoTempo = {}
+    mensangesNoTempo = {}
 
     def __init__(self, env):
         self.env = env
@@ -41,9 +41,9 @@ class Canal(object):
 
     def difundir(self, mensagem):
         mensagem=copy.deepcopy(mensagem) #Tirar a referência (vários veículos usam o mesmo programa)
-        if self.env.now not in self.todasTodasMensangesNoTempo:
-            self.todasTodasMensangesNoTempo[self.env.now] = []
-        self.todasTodasMensangesNoTempo[self.env.now].append(mensagem)
+        if self.env.now not in self.mensangesNoTempo:
+            self.mensangesNoTempo[self.env.now] = []
+        self.mensangesNoTempo[self.env.now].append(mensagem)
         self.q.put(mensagem)
 
     def __encaminhar(self, messagem):
@@ -134,7 +134,7 @@ class Lider(object):
                             'lider': self.idLider,
                             'visao': vid[0]
                         })
-                        if self.env.now >= 1500:
+                        if self.env.now >= 2500:
                             with open('visaoSincronizada.txt', 'w') as arq_vis:
                                 arq_vis.write(str(self.sincronizacoes))
                         #visoes Temporarias ← visoesTemporarias ∪ {m.visao}
@@ -240,15 +240,15 @@ canal.setLideres(lideres)
 environment.run(TEMPO_EXPERIMENTO*1000)
 
 
-colisoesNoTempo = [len(canal.todasTodasMensangesNoTempo[key]) for key in canal.todasTodasMensangesNoTempo.keys()]
+colisoesNoTempo = [len(canal.mensangesNoTempo[key]) for key in canal.mensangesNoTempo.keys()]
 #print(colisoesNoTempo)
-#print(canal.todasTodasMensangesNoTempo.keys())
+#print(canal.mensangesNoTempo.keys())
 
 fig, ax1 = plt.subplots()
 ax1.set_xlabel('Tempo em segundos')
 ax1.set_ylabel('Colisões')
 ax1.plot(
-    list(canal.todasTodasMensangesNoTempo.keys()),
+    list(canal.mensangesNoTempo.keys()),
     colisoesNoTempo)
 ax1.tick_params(axis='y', labelcolor='tab:red')
 fig.tight_layout()
