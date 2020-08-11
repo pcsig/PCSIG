@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # coding: utf-8
 
@@ -10,18 +9,19 @@ import matplotlib.pyplot as plt
 import copy
 
 # Configuração do Random
-SEED = 11
+SEED = 12
 random.seed(SEED)
 np.random.seed(SEED)
 
 LATENCIA_CANAL = 25
 PERDA_CANAL = 0
-TEMPO_LIMITE = 1000
+TEMPO_LIMITE = 5000
 
 TEMPO_ENVIO = 500
 T_ALEATORIO_MAX = 8
-QUANTIDADE_LIDERES = 2
-TEMPO_EXPERIMENTO = 103
+QUANTIDADE_LIDERES = 10
+TEMPO_EXPERIMENTO = 102
+lideres = []
 
 environment = simpy.Environment()
 
@@ -30,14 +30,32 @@ class Canal(object):
     pacotesPerdidos = 0
     tamanhoFilaNoTempo = {'tamanho':[], 'tempo': []}
     mensangesNoTempo = {}
+    lideres=[]
 
     def __init__(self, env):
         self.env = env
         self.q = queue.Queue()
         env.process(self.__run())
+        env.process(self.setLideres(env))
+    
+    def removerLider(self, idLider): 	
+        for l in self.lideres:
+            if l.idLider == idLider:
+                self.lideres.remove(l)
+    
+    def adicionarLider(self, idLider):
+        lider = Lider(self.env, idLider, self)
+        self.lideres.append(lider)
+        lideres.append(lider)
 
-    def setLideres(self, lideres):
-        self.lideres = lideres
+    def setLideres(self,env):
+        yield self.env.timeout(0) 
+        for i in range(QUANTIDADE_LIDERES):
+            self.adicionarLider(i)
+        #yield self.env.timeout(50*1000) 
+        #self.adicionarLider(12)   #Comentar se quiser retirar o experimento de entrada de pelotão
+        #yield self.env.timeout(20*1000)
+        #self.removerLider(0)
 
     def difundir(self, mensagem):
         mensagem=copy.deepcopy(mensagem) #Tirar a referência (vários veículos usam o mesmo programa)
@@ -47,7 +65,7 @@ class Canal(object):
         self.q.put(mensagem)
 
     def __encaminhar(self, messagem):
-        for lider in lideres:
+        for lider in self.lideres:
             lider.receber(messagem)
 
     def __getProximaMensagem(self):
@@ -56,6 +74,7 @@ class Canal(object):
                 mensagem = self.q.get()
                 resultado = np.arange (start = 1, stop = 3)
                 perdaDeMensagens = np.random.choice (a = resultado, p = [1-PERDA_CANAL, PERDA_CANAL])
+                #Política de descarte de mensagem
                 if perdaDeMensagens == 1 and (self.env.now - mensagem[1][2]["tempo"]) <= TEMPO_LIMITE:
                     return mensagem
                 else:
@@ -67,7 +86,6 @@ class Canal(object):
 
     def __run(self):
         while True:
-            #print(f"[{self.env.now}] Tamanho Fila: {self.q.qsize()}")
             self.tamanhoFilaNoTempo['tamanho'].append([self.q.qsize()])
             self.tamanhoFilaNoTempo['tempo'].append([self.env.now])
 
@@ -82,7 +100,7 @@ class Lider(object):
     visoesSincronizadas = []
     visoesConhecidas = []
     visao = ()
-    idVisao = 0    
+    versao = 0    
 
     mensagensRecebidas = []
    
@@ -99,28 +117,36 @@ class Lider(object):
 
         env.process(self.__enviar())
         env.process(self.__receber())
+        env.process(self.__atualizaversao())    #Descomentar para simular variação do pelotão
+        
+    def __atualizaversao(self):
+        #Experimento da dinamicidade dos multiplos pelotões
+        yield self.env.timeout(((TEMPO_EXPERIMENTO*1000)/(QUANTIDADE_LIDERES+1))*(self.idLider+1))
+        self.versao = self.versao+1
+        print('versão do lider ', self.idLider, 'atualizada ', self.versao, ' ', self.env.now)      
+        
 
 ################################### ETAPA DE MANUTENÇÃO DA TAREFA T2 ###################################
     def __manutencao(self):
         #mensagens Temporarias ← mensagensRecebidas
         mensagensTemporarias = list(self.mensagensRecebidas)
         visoesTemporarias = []            
-        lideres = []
-        
+        lideres = []        
         mensagensTemporarias_aux = []
         if mensagensTemporarias != None:
-            #para  cada m em mensagens Temporarias
+            #para  cada m em mensagensTemporarias
             for m in mensagensTemporarias:
                 #se m.idLider != idLider
                 if m[0] != self.idLider:
                     if m[0] not in lideres:
                         lideres.append(m[0])
-            for lider in lideres:
+            for l in lideres:
                 for m in mensagensTemporarias:
-                    if m[0] == lider:
+                    if m[0] == l:
                         vid_aux = m
                 mensagensTemporarias_aux.append(vid_aux)
             #para  cada v em m.visoesConhecidas
+            print(self.env.now, '=====', self.idLider)
             for vid in mensagensTemporarias_aux:
                 vis = list(self.visao)
                 v = vis[0:2]
@@ -134,9 +160,8 @@ class Lider(object):
                             'lider': self.idLider,
                             'visao': vid[0]
                         })
-                        if self.env.now >= 2500:
-                            with open('visaoSincronizada.txt', 'w') as arq_vis:
-                                arq_vis.write(str(self.sincronizacoes))
+                        with open('visaoSincronizada.txt', 'w') as arq_vis:
+                            arq_vis.write(str(self.sincronizacoes))
                         #visoes Temporarias ← visoesTemporarias ∪ {m.visao}
                         visoesTemporarias.append(vid[0:-1])
             #visoesSincronizadas ← visoesTemporarias
@@ -198,7 +223,7 @@ class Lider(object):
         while True:
             #sleep(periodo+tempoAleatorio)
             yield self.env.timeout(TEMPO_ENVIO + random.randint(0, T_ALEATORIO_MAX))
-            v_id = self.idLider
+            lider = self.idLider
             lideres = []
             v_aux = []
             #para  cada m em mensagens Recebidas faça
@@ -215,25 +240,23 @@ class Lider(object):
                 if m[0] != self.idLider:
                     if m[0] not in lideres:
                         lideres.append(m[0])
-            for lider in lideres:
+            for l in lideres:
                 for m in self.mensagensRecebidas:
-                    if m[0] == lider:
+                    if m[0] == l:
                         v_aux = m[1][0:2]
                 #se m.idLider != idLider então
                 if v_aux not in self.visoesConhecidas:
                     self.visoesConhecidas.append(v_aux)
             id = random.randint(0,1000000000)
-            self.visao = v_id, self.idVisao, {'id_mensagem': id, 'tempo': self.env.now}
+            #Composição da visão v=(lider, versao, membros) => a informação dos membros não é utilizado na simulação
+            self.visao = lider, self.versao, {'tempo': self.env.now}
             #mensagem ← (idLider,visao,visoesConhecidas)
             mensagem = [self.idLider, list(self.visao), self.visoesConhecidas]
             #enviar Mensagem(mensagem)
             self.canalDeComunicacao.difundir(mensagem)
 
 canal = Canal(environment)
-lideres = []
-for i in range(QUANTIDADE_LIDERES):
-    lideres.append(Lider(environment, i, canal))
-canal.setLideres(lideres)
+
 
 ############################### CRIÇÃO DE LOGS E GRÁFICOS ###############################
 
@@ -245,7 +268,7 @@ colisoesNoTempo = [len(canal.mensangesNoTempo[key]) for key in canal.mensangesNo
 #print(canal.mensangesNoTempo.keys())
 
 fig, ax1 = plt.subplots()
-ax1.set_xlabel('Tempo em segundos')
+ax1.set_xlabel('Tempo em milissegundos')
 ax1.set_ylabel('Colisões')
 ax1.plot(
     list(canal.mensangesNoTempo.keys()),
@@ -254,7 +277,7 @@ ax1.tick_params(axis='y', labelcolor='tab:red')
 fig.tight_layout()
 plt.show()
 
-exit(0)
+#exit(0)
 
 fig, ax1 = plt.subplots()
 ax1.set_xlabel('Tempo')
@@ -278,4 +301,3 @@ ax2.tick_params(axis='y', labelcolor='tab:blue')
 #           canal.tamanhoFilaNoTempo['tamanho'])
 fig.tight_layout()
 plt.show()
-
