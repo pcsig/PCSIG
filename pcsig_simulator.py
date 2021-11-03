@@ -1,5 +1,10 @@
-#!/usr/bin/python
-# coding: utf-8
+#!/usr/bin/python3.6
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov  1 08:05:24 2021
+
+@author: casa
+"""
 
 import simpy
 import random
@@ -13,14 +18,14 @@ SEED = 12
 random.seed(SEED)
 np.random.seed(SEED)
 
-LATENCIA_CANAL = 25
+LATENCIA_CANAL = 4
 PERDA_CANAL = 0
-TEMPO_LIMITE = 5000
+TEMPO_LIMITE = 1000
 
 TEMPO_ENVIO = 500
-T_ALEATORIO_MAX = 8
-QUANTIDADE_LIDERES = 10
-TEMPO_EXPERIMENTO = 102
+T_ALEATORIO_MAX = 9
+QUANTIDADE_LIDERES = 30
+TEMPO_EXPERIMENTO = 12
 lideres = []
 
 environment = simpy.Environment()
@@ -69,7 +74,7 @@ class Canal(object):
             lider.receber(messagem)
 
     def __getProximaMensagem(self):
-        while True:
+        while True:            
             if self.q.qsize():
                 mensagem = self.q.get()
                 resultado = np.arange (start = 1, stop = 3)
@@ -83,15 +88,20 @@ class Canal(object):
                     next
             else:
                 return None
-
     def __run(self):
         while True:
             self.tamanhoFilaNoTempo['tamanho'].append([self.q.qsize()])
-            self.tamanhoFilaNoTempo['tempo'].append([self.env.now])
-
-            yield self.env.timeout(LATENCIA_CANAL)
+            self.tamanhoFilaNoTempo['tempo'].append([self.env.now])            
+            #print(f'tamanho da fila {self.q.qsize()} t -> {self.env.now}')
             if self.q.qsize():
-                self.__encaminhar(self.__getProximaMensagem())
+                mensagem = self.__getProximaMensagem()
+                if mensagem != None:
+                    yield self.env.timeout(LATENCIA_CANAL)
+                    self.__encaminhar(mensagem)
+                else:
+                    yield self.env.timeout(1)
+            else:
+                yield self.env.timeout(1)
 
 
 ################################## DENIFINIÇÃO DA CLASSE LÍDER ##################################               
@@ -117,7 +127,7 @@ class Lider(object):
 
         env.process(self.__enviar())
         env.process(self.__receber())
-        env.process(self.__atualizaversao())    #Descomentar para simular variação do pelotão
+        #env.process(self.__atualizaversao())    #Descomentar para simular variação do pelotão
         
     def __atualizaversao(self):
         #Experimento da dinamicidade dos multiplos pelotões
@@ -127,7 +137,7 @@ class Lider(object):
         
 
 ################################### ETAPA DE MANUTENÇÃO DA TAREFA T2 ###################################
-    def __manutencao(self):
+    def __manutencao(self,tempAux):
         #mensagens Temporarias ← mensagensRecebidas
         mensagensTemporarias = list(self.mensagensRecebidas)
         visoesTemporarias = []            
@@ -136,10 +146,12 @@ class Lider(object):
         if mensagensTemporarias != None:
             #para  cada m em mensagensTemporarias
             for m in mensagensTemporarias:
-                #se m.idLider != idLider
-                if m[0] != self.idLider:
-                    if m[0] not in lideres:
-                        lideres.append(m[0])
+                #se m.cronometro≥(tempoLimite-tempAux)
+                if m[-1] >= (self.env.now - tempAux):
+                    #se m.idLider != idLider
+                    if m[0] != self.idLider:
+                        if m[0] not in lideres:
+                            lideres.append(m[0])
             for l in lideres:
                 for m in mensagensTemporarias:
                     if m[0] == l:
@@ -201,6 +213,8 @@ class Lider(object):
             mensagem = self.__receberMensagem()
             if mensagem:
                 delay = self.env.now - mensagem[1][2]["tempo"]
+                #print(f'Valor do delay -> {delay} -> {self.env.now}')
+                #print(f'Mensagem -> {mensagem}')
                 if mensagem[0] not in self.delayMensagensNoTempo:
                     self.delayMensagensNoTempo[mensagem[0]] = {
                         'tempo': [],
@@ -214,7 +228,7 @@ class Lider(object):
             if self.env.now == tempAux + TEMPO_LIMITE:
                 #tempAux ← cronometro
                 tempAux = self.env.now
-                self.__manutencao()
+                self.__manutencao(tempAux)
 
 
 ################################## TAREFA T1 - ENVIO DE MENSAGENS ##################################
@@ -247,11 +261,11 @@ class Lider(object):
                 #se m.idLider != idLider então
                 if v_aux not in self.visoesConhecidas:
                     self.visoesConhecidas.append(v_aux)
-            id = random.randint(0,1000000000)
+            #id = random.randint(0,1000000000)
             #Composição da visão v=(lider, versao, membros) => a informação dos membros não é utilizado na simulação
             self.visao = lider, self.versao, {'tempo': self.env.now}
-            #mensagem ← (idLider,visao,visoesConhecidas)
-            mensagem = [self.idLider, list(self.visao), self.visoesConhecidas]
+            #mensagem ← (idLider,visao,visoesConhecidas, cronometro)
+            mensagem = [self.idLider, list(self.visao), self.visoesConhecidas, self.env.now]
             #enviar Mensagem(mensagem)
             self.canalDeComunicacao.difundir(mensagem)
 
